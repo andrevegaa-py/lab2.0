@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis pedidos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone">
+    <main class="content">
+      <h1 class="title">Mis pedidos</h1>
+      <div id="lista-pedidos" class="lista-pedidos"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </main>
+    <nav class="tabbar">
+      <a href="registrar-pedido.html" class="tab"><span class="icon">＋</span><span>Registrar</span></a>
+      <a href="mis-pedidos.html" class="tab active"><span class="icon">≡</span><span>Mis Pedidos</span></a>
+      <a href="detalle-de-pedido.html" class="tab"><span class="icon">▤</span><span>Detalle</span></a>
+      <a href="estado-de-mi-pedido.html" class="tab"><span class="icon">◎</span><span>Estado</span></a>
+    </nav>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="reglas.js"></script>
+  <script>
+    const estilos = {
+      "Demorado": ["#C2410C", "#FFEDD5"], "En tiempo": ["#1D4ED8", "#DBEAFE"],
+      "Sin estimar": ["#475569", "#F1F5F9"], "Fecha no registrada": ["#475569", "#F1F5F9"],
+      "Fecha inválida": ["#B91C1C", "#FEE2E2"],
+    };
+    (async () => {
+      const cont = document.getElementById("lista-pedidos");
+      const pedidos = await obtenerPedidos();
+      cont.innerHTML = "";
+      if (!pedidos.length) {
+        cont.innerHTML = '<p class="vacio">Aún no hay pedidos. <a href="registrar-pedido.html">Registra el primero</a>.</p>';
+        return;
+      }
+      const hoy = new Date();
+      pedidos.forEach((p) => {
+        const est = calcularEstadoDemora(p.fecha_pedido_proveedor, p.plazo_estimado_dias, p.estado, hoy);
+        const [color, fondo] = estilos[est];
+        const a = document.createElement("a");
+        a.href = "detalle-de-pedido.html?id=" + encodeURIComponent(p.id);
+        a.className = "pedido-card" + (est === "Demorado" ? " pedido-card-alerta" : "");
+        a.innerHTML = `
+          <div class="pedido-card-header">
+            <span class="pedido-cliente">${escapar(p.cliente)}</span>
+            <span class="pedido-estado" style="color:${color};background:${fondo}">${est}</span>
+          </div>
+          <div class="pedido-producto">${escapar(p.producto)}</div>
+          <div class="pedido-meta">${moneda(p.precio_total)} · ${escapar(p.estado)}${p.pagado ? " · Pagado" : ""}</div>`;
+        cont.appendChild(a);
+      });
+    })();
+  </script>
+</body>
+</html>
