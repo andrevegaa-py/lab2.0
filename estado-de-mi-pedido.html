@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estado de mi pedido</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone">
+    <main class="content" id="contenido">
+      <h1 class="title">Estado de mi pedido</h1>
+      <div class="skeleton"></div>
+    </main>
+    <nav class="tabbar">
+      <a href="registrar-pedido.html" class="tab"><span class="icon">＋</span><span>Registrar</span></a>
+      <a href="mis-pedidos.html" class="tab"><span class="icon">≡</span><span>Mis Pedidos</span></a>
+      <a href="detalle-de-pedido.html" class="tab"><span class="icon">▤</span><span>Detalle</span></a>
+      <a href="estado-de-mi-pedido.html" class="tab active"><span class="icon">◎</span><span>Estado</span></a>
+      <a href="indicadores.html" class="tab"><span class="icon">▦</span><span>Indicadores</span></a>
+    </nav>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="reglas.js"></script>
+  <script>
+    (async () => {
+      const cont = document.getElementById("contenido");
+      const id = new URLSearchParams(location.search).get("id");
+      // Con ?id=... muestra ese pedido; sin id, el más reciente.
+      const p = id ? await obtenerPedidoPorId(id) : (await obtenerPedidos())[0];
+      if (!p) {
+        cont.innerHTML = '<h1 class="title">Estado de mi pedido</h1><p class="vacio">No hay pedidos para mostrar.</p>';
+        return;
+      }
+      const demora = calcularEstadoDemora(p.fecha_pedido_proveedor, p.plazo_estimado_dias, p.estado);
+      const listo = p.estado === "Listo para entrega";
+      let msg = "Tu pedido está en camino, dentro del tiempo estimado.";
+      if (listo) msg = "¡Tu pedido ya está listo para entrega!";
+      else if (demora === "Demorado") msg = "Tu pedido se está demorando más de lo esperado. Estamos consultando con el proveedor.";
+
+      const actual = Math.max(ESTADOS.indexOf(p.estado), 0);
+      const titulos = ["Pedido enviado al proveedor", "En tránsito", "Listo para entrega"];
+      const pasos = titulos.map((t, i) => `
+        <div class="paso ${i <= actual ? "completado" : ""} ${i === actual ? "actual" : ""}">
+          <div class="paso-punto">${i <= actual ? "✓" : ""}</div>
+          <div><div class="paso-texto-titulo">${t}</div>${i === actual ? '<div class="paso-texto-sub">Estado actual</div>' : ""}</div>
+        </div>`).join("");
+
+      cont.innerHTML = `
+        <h1 class="title">Estado de mi pedido</h1>
+        <div class="hero ${!listo && demora === "Demorado" ? "hero-alerta" : ""}">
+          <div class="hero-eyebrow">Estás siguiendo el envío de:</div>
+          <div class="hero-title">${escapar(p.producto)}</div>
+          <p class="hero-desc">${msg}</p>
+        </div>
+        <div class="card"><h2 class="seguimiento-title">Seguimiento</h2><div class="pasos">${pasos}</div></div>`;
+    })();
+  </script>
+</body>
+</html>

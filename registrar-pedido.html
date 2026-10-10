@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar pedido</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone">
+    <main class="content">
+      <h1 class="title">Registrar pedido</h1>
+      <form class="form" id="form-registro">
+        <div class="field">
+          <label for="cliente">Nombre del cliente</label>
+          <input type="text" id="cliente" placeholder="Ej. Carlos Mendoza" required />
+        </div>
+        <div class="field">
+          <label for="producto">Producto</label>
+          <input type="text" id="producto" placeholder="Ej. Audífonos Bluetooth Pro" required />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="precio">Precio total (S/)</label>
+            <input type="number" step="0.01" min="0" id="precio" placeholder="0.00" required />
+          </div>
+          <div class="field">
+            <label for="adelanto">Monto adelantado (S/)</label>
+            <input type="number" step="0.01" min="0" id="adelanto" placeholder="0.00" required />
+          </div>
+        </div>
+        <div class="saldo-box">
+          <span class="saldo-label">Saldo pendiente</span>
+          <strong class="saldo-monto" id="monto-restante">S/ 0.00</strong>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="fecha">Fecha de pedido al proveedor</label>
+            <input type="date" id="fecha" required />
+          </div>
+          <div class="field">
+            <label for="plazo">Plazo estimado (días)</label>
+            <input type="number" min="1" id="plazo" value="21" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Guardar pedido</button>
+      </form>
+    </main>
+    <nav class="tabbar">
+      <a href="registrar-pedido.html" class="tab active"><span class="icon">＋</span><span>Registrar</span></a>
+      <a href="mis-pedidos.html" class="tab"><span class="icon">≡</span><span>Mis Pedidos</span></a>
+      <a href="detalle-de-pedido.html" class="tab"><span class="icon">▤</span><span>Detalle</span></a>
+      <a href="estado-de-mi-pedido.html" class="tab"><span class="icon">◎</span><span>Estado</span></a>
+      <a href="indicadores.html" class="tab"><span class="icon">▦</span><span>Indicadores</span></a>
+    </nav>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="reglas.js"></script>
+  <script>
+    const form = document.getElementById("form-registro");
+    const iPrecio = document.getElementById("precio");
+    const iAdelanto = document.getElementById("adelanto");
+    const iFecha = document.getElementById("fecha");
+    const lblSaldo = document.getElementById("monto-restante");
+    iFecha.max = new Date().toISOString().slice(0, 10);
+
+    function pintarSaldo() {
+      const s = calcularSaldoPendiente(iPrecio.value || 0, iAdelanto.value || 0, false);
+      lblSaldo.textContent = moneda(s);
+    }
+    iPrecio.addEventListener("input", pintarSaldo);
+    iAdelanto.addEventListener("input", pintarSaldo);
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const precio = parseFloat(iPrecio.value);
+      const adelanto = parseFloat(iAdelanto.value);
+      if (adelanto > precio) return avisar("El adelanto no puede ser mayor al precio total.", "error");
+
+      const btn = form.querySelector("button[type=submit]");
+      btn.disabled = true; btn.textContent = "Guardando...";
+
+      const guardado = await agregarPedido({
+        cliente: document.getElementById("cliente").value.trim(),
+        producto: document.getElementById("producto").value.trim(),
+        precio_total: precio,
+        adelanto: adelanto,
+        fecha_pedido_proveedor: iFecha.value,
+        plazo_estimado_dias: parseInt(document.getElementById("plazo").value, 10),
+      });
+
+      if (guardado) {
+        avisar("Pedido guardado");
+        form.reset();
+        document.getElementById("plazo").value = 21;
+        pintarSaldo();
+      }
+      btn.disabled = false; btn.textContent = "Guardar pedido";
+    });
+  </script>
+</body>
+</html>

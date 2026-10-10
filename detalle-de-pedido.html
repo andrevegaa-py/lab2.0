@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalle de pedido</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="phone">
+    <main class="content" id="contenido-detalle">
+      <a href="mis-pedidos.html" class="back-link">&larr; Mis pedidos</a>
+      <p class="vacio">Elige un pedido en “Mis Pedidos” para ver su detalle.</p>
+    </main>
+    <nav class="tabbar">
+      <a href="registrar-pedido.html" class="tab"><span class="icon">＋</span><span>Registrar</span></a>
+      <a href="mis-pedidos.html" class="tab"><span class="icon">≡</span><span>Mis Pedidos</span></a>
+      <a href="detalle-de-pedido.html" class="tab active"><span class="icon">▤</span><span>Detalle</span></a>
+      <a href="estado-de-mi-pedido.html" class="tab"><span class="icon">◎</span><span>Estado</span></a>
+      <a href="indicadores.html" class="tab"><span class="icon">▦</span><span>Indicadores</span></a>
+    </nav>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="reglas.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const cont = document.getElementById("contenido-detalle");
+    const volver = '<a href="mis-pedidos.html" class="back-link">&larr; Mis pedidos</a>';
+
+    function pintar(p) {
+      const saldo = calcularSaldoPendiente(p.precio_total, p.adelanto, p.pagado);
+      cont.innerHTML = `${volver}
+        <h1 class="title">Detalle de pedido</h1>
+        <div class="card">
+          <div class="row-info"><span class="label-muted">Cliente</span><span class="value">${escapar(p.cliente)}</span></div>
+          <div class="row-info"><span class="label-muted">Producto</span><span class="value">${escapar(p.producto)}</span></div>
+          <div class="row-info"><span class="label-muted">Pedido al proveedor</span><span class="value">${escapar(p.fecha_pedido_proveedor || "sin fecha")}</span></div>
+          <div class="row-info"><span class="label-muted">Plazo estimado</span><span class="value">${escapar(p.plazo_estimado_dias || "—")} días</span></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">Resumen financiero</h2>
+          <div class="row-info"><span class="label-muted">Precio total</span><span class="value">${moneda(p.precio_total)}</span></div>
+          <div class="row-info"><span class="label-muted">Monto adelantado</span><span class="value">${moneda(p.adelanto)}</span></div>
+          <div class="saldo-box"><span class="saldo-label">Saldo pendiente</span>
+            <span class="saldo-monto">${saldo === null ? "Datos incompletos" : moneda(saldo)}</span></div>
+        </div>
+        <div class="card field">
+          <label for="sel-estado">Estado del envío</label>
+          <select id="sel-estado">${ESTADOS.map((e) => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select>
+        </div>
+        <button id="btn-pagado" type="button" class="btn-primary ${p.pagado ? "btn-ok" : ""}" ${p.pagado ? "disabled" : ""}>
+          ${p.pagado ? "Pagado ✓" : "Marcar como pagado"}</button>`;
+
+      document.getElementById("btn-pagado").onclick = async () => {
+        const r = await actualizarPedido(p.id, { pagado: true });
+        if (r) { avisar("Pedido marcado como pagado"); pintar(r); }
+      };
+      document.getElementById("sel-estado").onchange = async (e) => {
+        const r = await actualizarPedido(p.id, { estado: e.target.value });
+        if (r) { avisar("Estado actualizado"); pintar(r); }
+      };
+    }
+
+    (async () => {
+      if (!id) return;
+      cont.innerHTML = volver + '<div class="skeleton"></div>';
+      const p = await obtenerPedidoPorId(id);
+      if (p) pintar(p);
+      else cont.innerHTML = volver + '<p class="vacio">No se encontró ese pedido.</p>';
+    })();
+  </script>
+</body>
+</html>
